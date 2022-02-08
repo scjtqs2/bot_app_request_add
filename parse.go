@@ -3,9 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"github.com/scjtqs2/bot_adapter/coolq"
 	"github.com/scjtqs2/bot_adapter/event"
 	"github.com/scjtqs2/bot_adapter/pb/entity"
+	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
+	"strconv"
+	"time"
 )
 
 func parseMsg(data string) {
@@ -31,12 +36,14 @@ func parseMsg(data string) {
 		case event.NOTICE_TYPE_GROUP_BAN:
 			var req event.NoticeGroupBan
 			_ = json.Unmarshal([]byte(msg.Raw), &req)
-		case event.NOTICE_TYPE_GROUP_DECREASE:
+		case event.NOTICE_TYPE_GROUP_DECREASE: // 群成员减少
 			var req event.NoticeGroupDecrease
 			_ = json.Unmarshal([]byte(msg.Raw), &req)
-		case event.NOTICE_TYPE_GROUP_INCREASE:
+			group_decrease(req)
+		case event.NOTICE_TYPE_GROUP_INCREASE: // 群成员增加
 			var req event.NoticeGroupIncrease
 			_ = json.Unmarshal([]byte(msg.Raw), &req)
+			group_increase(req)
 		case event.NOTICE_TYPE_GROUP_ADMIN:
 			var req event.NoticeGroupAdmin
 			_ = json.Unmarshal([]byte(msg.Raw), &req)
@@ -89,4 +96,75 @@ func apploveFriendRequest(flag string) {
 // apploveGroupRequest 通过群组添加请求
 func apploveGroupRequest(flag string, sub_type string) {
 	_, _ = bot_adapter_client.SetGroupAddRequest(context.TODO(), &entity.SetGroupAddRequestReq{Approve: true, Flag: flag, SubType: sub_type})
+}
+
+// group_increase 回应群成员增加
+func group_increase(req event.NoticeGroupIncrease) {
+	at := coolq.EnAtCode(strconv.FormatInt(req.UserID, 10))
+	img := coolq.EnImageCode(fmt.Sprintf("http://q1.qlogo.cn/g?b=qq&nk=%d&s=100", req.UserID), 1)
+	groupName, err := getGroupName(req.GroupID)
+	if err != nil {
+		log.Errorf("获取群信息错误：err:%v", err)
+		return
+	}
+	nowDate := time.Now().Format("2006-01-02 15:04:05")
+	message := fmt.Sprintf("尊敬的 %s 您好~ \n %s \n 欢迎加入%s~ \n 本群的群号是 %d~ \n 已经赞你了哦！\n  请看公告遵守相关规定~ \n 当前时间 %s",
+		at,
+		img,
+		groupName,
+		req.GroupID,
+		nowDate,
+	)
+	_, _ = bot_adapter_client.SendGroupMsg(context.TODO(), &entity.SendGroupMsgReq{
+		GroupId: req.GroupID,
+		Message: []byte(message),
+	})
+}
+
+// group_decrease 回应群成员减少
+func group_decrease(req event.NoticeGroupDecrease) {
+	// at := coolq.EnAtCode(strconv.FormatInt(req.UserID, 10))
+	img := coolq.EnImageCode(fmt.Sprintf("http://q1.qlogo.cn/g?b=qq&nk=%d&s=100", req.UserID), 1)
+	groupName, err := getGroupName(req.GroupID)
+	if err != nil {
+		log.Errorf("获取群信息错误：err:%v", err)
+		return
+	}
+	nowDate := time.Now().Format("2006-01-02 15:04:05")
+	var message string
+	switch req.SubType {
+	case "kick": // 被踢
+		operatorName, err := getMemberNickName(req.GroupID, req.OperatorID)
+		if err != nil {
+			log.Errorf("获取群成员信息失败,group:%d,userid:%d,err:%v", req.GroupID, req.OperatorID, err)
+			return
+		}
+		message = fmt.Sprintf("用户 %d \n %s \n 被管理员 %s 移除了群 %s \n 当前时间： %s", req.UserID, img, operatorName, groupName, nowDate)
+	case "leave": // 主动退群
+		message = fmt.Sprintf("用户 %d \n %s \n 主动离开了群 %s \n 当前时间： %s", req.UserID, img, groupName, nowDate)
+	default:
+		return
+	}
+	_, _ = bot_adapter_client.SendGroupMsg(context.TODO(), &entity.SendGroupMsgReq{
+		GroupId: req.GroupID,
+		Message: []byte(message),
+	})
+}
+
+// getGroupName 通过群号码查群名称
+func getGroupName(groupId int64) (string, error) {
+	groupInfo, err := bot_adapter_client.GetGroupInfo(context.TODO(), &entity.GetGroupInfoReq{GroupId: groupId})
+	if err != nil {
+		return "", err
+	}
+	return groupInfo.GroupName, nil
+}
+
+// getMemberNickName 通过qq号和群号，查 群成员昵称
+func getMemberNickName(groupID, userID int64) (string, error) {
+	memberinfo, err := bot_adapter_client.GetGroupMemberInfo(context.TODO(), &entity.GetGroupMemberInfoReq{GroupId: groupID, UserId: userID, NoCache: false})
+	if err != nil {
+		return "", err
+	}
+	return memberinfo.Nickname, nil
 }
