@@ -39,11 +39,11 @@ func parseMsg(data string) {
 		case event.NOTICE_TYPE_GROUP_DECREASE: // 群成员减少
 			var req event.NoticeGroupDecrease
 			_ = json.Unmarshal([]byte(msg.Raw), &req)
-			group_decrease(req)
+			groupDecrease(req)
 		case event.NOTICE_TYPE_GROUP_INCREASE: // 群成员增加
 			var req event.NoticeGroupIncrease
 			_ = json.Unmarshal([]byte(msg.Raw), &req)
-			group_increase(req)
+			groupIncrease(req)
 		case event.NOTICE_TYPE_GROUP_ADMIN:
 			var req event.NoticeGroupAdmin
 			_ = json.Unmarshal([]byte(msg.Raw), &req)
@@ -90,16 +90,16 @@ func parseMsg(data string) {
 
 // apploveFriendRequest 通过好友请求
 func apploveFriendRequest(flag string) {
-	_, _ = bot_adapter_client.SetFriendAddRequest(context.TODO(), &entity.SetFriendAddRequestReq{Approve: true, Flag: flag})
+	_, _ = botAdapterClient.SetFriendAddRequest(context.TODO(), &entity.SetFriendAddRequestReq{Approve: true, Flag: flag})
 }
 
 // apploveGroupRequest 通过群组添加请求
 func apploveGroupRequest(flag string, sub_type string) {
-	_, _ = bot_adapter_client.SetGroupAddRequest(context.TODO(), &entity.SetGroupAddRequestReq{Approve: true, Flag: flag, SubType: sub_type})
+	_, _ = botAdapterClient.SetGroupAddRequest(context.TODO(), &entity.SetGroupAddRequestReq{Approve: true, Flag: flag, SubType: sub_type})
 }
 
-// group_increase 回应群成员增加
-func group_increase(req event.NoticeGroupIncrease) {
+// groupIncrease 回应群成员增加
+func groupIncrease(req event.NoticeGroupIncrease) {
 	at := coolq.EnAtCode(strconv.FormatInt(req.UserID, 10))
 	img := coolq.EnImageCode(fmt.Sprintf("http://q1.qlogo.cn/g?b=qq&nk=%d&s=100", req.UserID), 1)
 	groupName, err := getGroupName(req.GroupID)
@@ -115,14 +115,14 @@ func group_increase(req event.NoticeGroupIncrease) {
 		req.GroupID,
 		nowDate,
 	)
-	_, _ = bot_adapter_client.SendGroupMsg(context.TODO(), &entity.SendGroupMsgReq{
+	_, _ = botAdapterClient.SendGroupMsg(context.TODO(), &entity.SendGroupMsgReq{
 		GroupId: req.GroupID,
 		Message: []byte(message),
 	})
 }
 
-// group_decrease 回应群成员减少
-func group_decrease(req event.NoticeGroupDecrease) {
+// groupDecrease 回应群成员减少
+func groupDecrease(req event.NoticeGroupDecrease) {
 	// at := coolq.EnAtCode(strconv.FormatInt(req.UserID, 10))
 	img := coolq.EnImageCode(fmt.Sprintf("http://q1.qlogo.cn/g?b=qq&nk=%d&s=100", req.UserID), 1)
 	groupName, err := getGroupName(req.GroupID)
@@ -145,15 +145,15 @@ func group_decrease(req event.NoticeGroupDecrease) {
 	default:
 		return
 	}
-	_, _ = bot_adapter_client.SendGroupMsg(context.TODO(), &entity.SendGroupMsgReq{
+	_, _ = botAdapterClient.SendGroupMsg(context.TODO(), &entity.SendGroupMsgReq{
 		GroupId: req.GroupID,
 		Message: []byte(message),
 	})
 }
 
 // getGroupName 通过群号码查群名称
-func getGroupName(groupId int64) (string, error) {
-	groupInfo, err := bot_adapter_client.GetGroupInfo(context.TODO(), &entity.GetGroupInfoReq{GroupId: groupId})
+func getGroupName(groupID int64) (string, error) {
+	groupInfo, err := botAdapterClient.GetGroupInfo(context.TODO(), &entity.GetGroupInfoReq{GroupId: groupID})
 	if err != nil {
 		return "", err
 	}
@@ -162,7 +162,7 @@ func getGroupName(groupId int64) (string, error) {
 
 // getMemberNickName 通过qq号和群号，查 群成员昵称
 func getMemberNickName(groupID, userID int64) (string, error) {
-	memberinfo, err := bot_adapter_client.GetGroupMemberInfo(context.TODO(), &entity.GetGroupMemberInfoReq{GroupId: groupID, UserId: userID, NoCache: false})
+	memberinfo, err := botAdapterClient.GetGroupMemberInfo(context.TODO(), &entity.GetGroupMemberInfoReq{GroupId: groupID, UserId: userID, NoCache: false})
 	if err != nil {
 		return "", err
 	}
