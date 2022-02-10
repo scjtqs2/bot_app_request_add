@@ -1,13 +1,14 @@
 package main
 
 import (
+	"os"
+	"os/signal"
+
 	"github.com/kataras/iris/v12"
 	"github.com/scjtqs2/bot_adapter/client"
 	"github.com/scjtqs2/bot_adapter/sha256"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
-	"os"
-	"os/signal"
 )
 
 func main() {
