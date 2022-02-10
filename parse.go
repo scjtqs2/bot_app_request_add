@@ -94,8 +94,8 @@ func apploveFriendRequest(flag string) {
 }
 
 // apploveGroupRequest 通过群组添加请求
-func apploveGroupRequest(flag string, sub_type string) {
-	_, _ = botAdapterClient.SetGroupAddRequest(context.TODO(), &entity.SetGroupAddRequestReq{Approve: true, Flag: flag, SubType: sub_type})
+func apploveGroupRequest(flag string, subType string) {
+	_, _ = botAdapterClient.SetGroupAddRequest(context.TODO(), &entity.SetGroupAddRequestReq{Approve: true, Flag: flag, SubType: subType})
 }
 
 // groupIncrease 回应群成员增加
